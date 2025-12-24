@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, createContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PublicHome from './pages/PublicHome.tsx';
 import PublicServices from './pages/PublicServices.tsx';
 import PublicAbout from './pages/PublicAbout.tsx';
@@ -16,7 +16,7 @@ import Footer from './components/Footer.tsx';
 import AdminSidebar from './components/AdminSidebar.tsx';
 
 // Mock Auth Context
-const AuthContext = React.createContext<{
+export const AuthContext = createContext<{
   user: any;
   login: (u: string, p: string) => Promise<boolean>;
   logout: () => void;
@@ -34,6 +34,14 @@ const ScrollToTop = () => {
   return null;
 };
 
+const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="flex flex-col min-h-screen">
+    <Header />
+    <main className="flex-grow">{children}</main>
+    <Footer />
+  </div>
+);
+
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
 
@@ -47,14 +55,6 @@ const App: React.FC = () => {
   };
 
   const logout = () => setUser(null);
-
-  const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-grow">{children}</main>
-      <Footer />
-    </div>
-  );
 
   const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return user ? (
