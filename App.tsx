@@ -8,6 +8,8 @@ import PublicTeam from './pages/PublicTeam.tsx';
 import PublicContact from './pages/PublicContact.tsx';
 import PublicDiagnoseRight from './pages/PublicDiagnoseRight.tsx';
 import PublicBlogs from './pages/PublicBlogs.tsx';
+import PublicStore from './pages/PublicStore.tsx';
+import PublicCart from './pages/PublicCart.tsx';
 import AdminDashboard from './pages/AdminDashboard.tsx';
 import AdminLogin from './pages/AdminLogin.tsx';
 import AdminSettings from './pages/AdminSettings.tsx';
@@ -15,6 +17,8 @@ import AdminServices from './pages/AdminServices.tsx';
 import AdminTeam from './pages/AdminTeam.tsx';
 import AdminContacts from './pages/AdminContacts.tsx';
 import AdminBlogs from './pages/AdminBlogs.tsx';
+import AdminPageEditor from './pages/AdminPageEditor.tsx';
+import AdminStore from './pages/AdminStore.tsx';
 import Header from './components/Header.tsx';
 import Footer from './components/Footer.tsx';
 import AdminSidebar from './components/AdminSidebar.tsx';
@@ -80,6 +84,8 @@ const App: React.FC = () => {
           {/* Public Routes */}
           <Route path="/" element={<PublicLayout><PublicHome /></PublicLayout>} />
           <Route path="/services" element={<PublicLayout><PublicServices /></PublicLayout>} />
+          <Route path="/store" element={<PublicLayout><PublicStore /></PublicLayout>} />
+          <Route path="/cart" element={<PublicLayout><PublicCart /></PublicLayout>} />
           <Route path="/diagnose-right" element={<PublicLayout><PublicDiagnoseRight /></PublicLayout>} />
           <Route path="/blogs" element={<PublicLayout><PublicBlogs /></PublicLayout>} />
           <Route path="/about" element={<PublicLayout><PublicAbout /></PublicLayout>} />
@@ -91,9 +97,11 @@ const App: React.FC = () => {
           <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin/settings" element={<PrivateRoute><AdminSettings /></PrivateRoute>} />
           <Route path="/admin/services" element={<PrivateRoute><AdminServices /></PrivateRoute>} />
+          <Route path="/admin/store" element={<PrivateRoute><AdminStore /></PrivateRoute>} />
           <Route path="/admin/team" element={<PrivateRoute><AdminTeam /></PrivateRoute>} />
           <Route path="/admin/contacts" element={<PrivateRoute><AdminContacts /></PrivateRoute>} />
           <Route path="/admin/blogs" element={<PrivateRoute><AdminBlogs /></PrivateRoute>} />
+          <Route path="/admin/page-editor" element={user ? <AdminPageEditor /> : <Navigate to="/admin/login" />} />
           
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

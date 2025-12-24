@@ -1,11 +1,13 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../services/firestore.ts';
-import { seoService } from '../services/seo.ts';
+import { seoService, SEOAnalysisResult, SEOCheck, DetailedAISuggestions } from '../services/seo.ts';
 import { ICONS } from '../constants.tsx';
 import { RichTextEditor } from '../components/RichTextEditor.tsx';
+import { GoogleGenAI, Type } from "@google/genai";
 
-type Tab = 'content' | 'media' | 'seo' | 'metadata' | 'analytics' | 'revisions';
+type Tab = 'content' | 'seo' | 'metadata' | 'analytics' | 'revisions';
+type SEOFilter = 'all' | 'basic' | 'title' | 'readability';
 
 const SERPPreview: React.FC<{ title: string; url: string; description: string }> = ({ title, url, description }) => (
   <div className="bg-white p-6 border border-gray-100 rounded-2xl shadow-sm max-w-xl">
@@ -22,26 +24,48 @@ const SERPPreview: React.FC<{ title: string; url: string; description: string }>
   </div>
 );
 
+const SEOAuditItem: React.FC<{ check: SEOCheck }> = ({ check }) => {
+  const [isOpen, setIsOpen] = useState(check.status === 'error');
+  return (
+    <div className="border-b border-gray-50 last:border-none">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-4 flex items-center justify-between group transition-colors hover:bg-gray-50/50 px-2 rounded-lg"
+      >
+        <div className="flex items-center space-x-4">
+          <div className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full ${
+            check.status === 'success' ? 'text-green-500' : 'text-red-500'
+          }`}>
+            {check.status === 'success' ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            )}
+          </div>
+          <span className={`text-sm font-bold ${check.status === 'success' ? 'text-syan-dark' : 'text-syan-dark opacity-90'}`}>{check.title}</span>
+        </div>
+        <div className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+          <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-11 pb-5 pt-1 animate-in slide-in-from-top-2 duration-300">
+          <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-lg">{check.description}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DEFAULT_BLOG_DATA = {
   title: '', 
   author: 'Dr. S. Yan', 
   content: '', 
   status: 'Draft',
   slug: '',
-  publishDate: new Date().toISOString().split('T')[0],
-  template: 'Standard',
-  allowComments: true,
-  tags: '',
-  media: [] as { type: 'image' | 'video', url: string, alt?: string }[],
-  seo: { 
-    focusKeyword: '', 
-    seoTitle: '', 
-    metaDescription: '', 
-    canonicalUrl: '', 
-    noIndex: false 
-  },
+  media: [] as any[],
+  seo: { focusKeyword: '', seoTitle: '', metaDescription: '', canonicalUrl: '', noIndex: false },
   social: { ogTitle: '', ogDescription: '', ogImage: '', twitterCard: 'summary_large_image' },
-  schema: { type: 'MedicalEntity', data: '{}' }
 };
 
 const AdminBlogs: React.FC = () => {
@@ -49,41 +73,30 @@ const AdminBlogs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('content');
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [revisions, setRevisions] = useState<any[]>([]);
-  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [seoFilter, setSeoFilter] = useState<SEOFilter>('all');
   
-  // Editor State
   const [blogData, setBlogData] = useState(DEFAULT_BLOG_DATA);
+  const [seoAnalysis, setSeoAnalysis] = useState<SEOAnalysisResult>({ score: 0, errors: { basic: 0, title: 0, readability: 0 }, checks: [] });
+  const [detailedAiSuggestions, setDetailedAiSuggestions] = useState<DetailedAISuggestions | null>(null);
+  const [analyticsResult, setAnalyticsResult] = useState<any>(null);
+  const [revisions, setRevisions] = useState<any[]>([]);
 
-  const [seoAnalysis, setSeoAnalysis] = useState<{score: number, checks: string[]}>({ score: 0, checks: [] });
-
-  useEffect(() => {
-    loadPosts();
-  }, []);
-
-  useEffect(() => {
-    if (editingId) {
-      loadRevisions(editingId);
-    }
-  }, [editingId]);
+  useEffect(() => { loadPosts(); }, []);
 
   const loadPosts = async () => {
     const data = await db.list('blogs');
-    setPosts(data.length ? data : [
-      { id: '1', title: 'The Future of AI in Clinical Diagnosis', author: 'Dr. S. Yan', status: 'Published', date: '2024-10-24', slug: 'ai-clinical-diagnosis', seo: { focusKeyword: 'Clinical AI', metaDescription: 'Expert insights into clinical AI.' } }
-    ]);
+    setPosts(data.length ? data : []);
   };
 
   const loadRevisions = async (id: string) => {
-    const revs = await db.get('seo_revisions', id);
-    setRevisions(revs || []);
+    const data = await db.get('seo_revisions', id) || [];
+    setRevisions(data);
   };
 
-  const handleTitleChange = (val: string) => {
-    const slug = (val || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const newData = { ...blogData, title: val, slug };
-    setBlogData(newData);
-    handleLiveSEO(newData);
+  const loadAiSuggestions = async (id: string) => {
+    const data = await db.get('seo/aiSuggestions', id);
+    if (data) setDetailedAiSuggestions(data);
   };
 
   const handleLiveSEO = (data = blogData) => {
@@ -91,397 +104,397 @@ const AdminBlogs: React.FC = () => {
     setSeoAnalysis(result);
   };
 
-  const handleAiGenerate = async () => {
-    if (!blogData.title || !blogData.seo?.focusKeyword) {
-      alert("Please enter a Title and Focus Keyword first for the AI to follow SEO rules.");
+  const handleAiPillarCompose = async () => {
+    if (!blogData.title || !blogData.seo.focusKeyword) {
+      alert("Please enter a Title and Focus Keyword first.");
       return;
     }
-    setIsAiGenerating(true);
-    const content = await seoService.generateSEOContent(blogData.title, blogData.seo.focusKeyword);
+    setIsAiProcessing(true);
+    const content = await seoService.generatePillarPost(blogData.title, blogData.seo.focusKeyword);
     if (content) {
       const newData = { ...blogData, content };
       setBlogData(newData);
       handleLiveSEO(newData);
-    } else {
-      alert("AI Generation failed. Check API Key or connectivity.");
     }
-    setIsAiGenerating(false);
+    setIsAiProcessing(false);
+  };
+
+  const handleGetDetailedSeoAnalysis = async () => {
+    if (!blogData.content || !blogData.seo.focusKeyword) {
+      alert("Please enter content and a focus keyword first.");
+      return;
+    }
+    setIsAiProcessing(true);
+    const suggestions = await seoService.analyzeContentDetailed(blogData.content, blogData.title, blogData.seo.focusKeyword);
+    if (suggestions) {
+      setDetailedAiSuggestions(suggestions);
+      if (editingId) {
+        await db.save('seo/aiSuggestions', editingId, suggestions);
+      }
+    }
+    setIsAiProcessing(false);
+  };
+
+  const handlePredictAnalytics = async () => {
+    setIsAiProcessing(true);
+    const res = await seoService.predictAnalytics(blogData.content, blogData.title);
+    setAnalyticsResult(res);
+    setIsAiProcessing(false);
+  };
+
+  const handleGenerateSocialMeta = async () => {
+    setIsAiProcessing(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const prompt = `Generate an OpenGraph Title and Meta Description for: ${blogData.title}. Focus Keyword: ${blogData.seo.focusKeyword}. Context: ${blogData.content.substring(0, 400)}. Return JSON.`;
+      const res = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING }
+            },
+            required: ['title', 'description']
+          }
+        }
+      });
+      const data = JSON.parse(res.text || '{}');
+      setBlogData({
+        ...blogData,
+        social: { ...blogData.social, ogTitle: data.title || blogData.title, ogDescription: data.description || '' }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    setIsAiProcessing(false);
   };
 
   const saveBlog = async () => {
     const id = editingId || Math.random().toString(36).substr(2, 9);
-    await db.save('blogs', id, { ...blogData, id });
+    const existing = await db.get('blogs', id);
+    let summary = "Revision saved.";
+    if (existing) {
+       summary = await seoService.generateRevisionSummary(existing.content, blogData.content);
+    }
+    await db.save('blogs', id, { ...blogData, id, aiSummary: summary });
+    
+    // Also save the AI suggestions if they were generated during this session
+    if (detailedAiSuggestions) {
+      await db.save('seo/aiSuggestions', id, detailedAiSuggestions);
+    }
+
     await loadPosts();
     setIsAdding(false);
-  };
-
-  const addMedia = (type: 'image' | 'video') => {
-    const url = prompt(`Enter ${type} URL:`);
-    if (url) {
-      setBlogData({
-        ...blogData,
-        media: [...(blogData.media || []), { type, url, alt: '' }]
-      });
-    }
-  };
-
-  const removeMedia = (index: number) => {
-    const newMedia = [...(blogData.media || [])];
-    newMedia.splice(index, 1);
-    setBlogData({ ...blogData, media: newMedia });
   };
 
   const openEditor = (post: any = null) => {
     if (post) {
       setEditingId(post.id);
-      // Deep merge with defaults to ensure nested objects exist
-      setBlogData({
-        ...DEFAULT_BLOG_DATA,
-        ...post,
-        seo: { ...DEFAULT_BLOG_DATA.seo, ...(post.seo || {}) },
-        social: { ...DEFAULT_BLOG_DATA.social, ...(post.social || {}) },
-        media: post.media || []
-      });
+      setBlogData({ ...DEFAULT_BLOG_DATA, ...post });
+      loadRevisions(post.id);
+      loadAiSuggestions(post.id);
     } else {
       setEditingId(null);
       setBlogData(DEFAULT_BLOG_DATA);
+      setRevisions([]);
+      setDetailedAiSuggestions(null);
+      setAnalyticsResult(null);
     }
     setActiveTab('content');
     setIsAdding(true);
+    handleLiveSEO(post || DEFAULT_BLOG_DATA);
+  };
+
+  const filteredChecks = seoFilter === 'all' ? seoAnalysis.checks : seoAnalysis.checks.filter(c => c.category === seoFilter);
+
+  const applyAISuggestion = (type: 'title' | 'meta' | 'h1') => {
+    if (!detailedAiSuggestions) return;
+    if (type === 'title') {
+      setBlogData(prev => ({ ...prev, seo: { ...prev.seo, seoTitle: detailedAiSuggestions.optimizedTitle } }));
+    } else if (type === 'meta') {
+      setBlogData(prev => ({ ...prev, seo: { ...prev.seo, metaDescription: detailedAiSuggestions.metaDescription } }));
+    } else if (type === 'h1') {
+      setBlogData(prev => ({ ...prev, title: detailedAiSuggestions.suggestedHeadings.h1 }));
+    }
   };
 
   return (
     <div className="max-w-[1400px] mx-auto animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-10">
         <div>
-          <h1 className="text-3xl font-black text-syan-dark tracking-tight uppercase">Insight Registry</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">Enterprise CMS with TruSEO™ & AI Generation.</p>
+          <h1 className="text-3xl font-black text-syan-dark tracking-tight uppercase">Registry Access</h1>
+          <p className="text-sm text-gray-500 font-medium mt-1">Medical AI-CMS & TruSEO™ Integration.</p>
         </div>
-        <button 
-          onClick={() => openEditor()}
-          className="px-8 py-3.5 bg-syan-teal text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-syan-teal/20 hover:scale-105 transition-transform"
-        >
-          <span>+ Compose Insight</span>
+        <button onClick={() => openEditor()} className="px-8 py-3.5 bg-syan-teal text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:scale-105 transition-all">
+          Compose Insight
         </button>
       </div>
 
       {isAdding && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-syan-dark/90 backdrop-blur-md" onClick={() => setIsAdding(false)}></div>
-          <div className="relative w-full max-w-6xl bg-white rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in slide-in-from-bottom-8">
+          <div className="absolute inset-0 bg-syan-dark/95 backdrop-blur-md" onClick={() => setIsAdding(false)}></div>
+          <div className="relative w-full max-w-7xl bg-white rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
             
-            {/* Tab Header */}
             <div className="px-10 pt-8 border-b border-gray-100 bg-syan-gray/20">
               <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center space-x-4">
-                  <h2 className="text-xl font-black text-syan-dark uppercase tracking-widest">Medical Insight Editor</h2>
-                  <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${blogData.status === 'Published' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                    {blogData.status}
-                  </span>
+                <div className="flex items-center space-x-6">
+                   <h2 className="text-xl font-black text-syan-dark uppercase tracking-widest">Medical Insight Console</h2>
+                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${seoAnalysis.score > 70 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    SEO Health: {seoAnalysis.score}%
+                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${seoAnalysis.score > 70 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    <span className="text-[10px] font-black uppercase">SEO Score: {seoAnalysis.score}/100</span>
-                  </div>
-                  <button onClick={saveBlog} className="px-8 py-2.5 bg-syan-teal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-syan-dark transition-colors">
-                    {editingId ? 'Update Insight' : 'Publish to Registry'}
-                  </button>
+                  <button onClick={saveBlog} className="px-8 py-2.5 bg-syan-teal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-syan-dark transition-colors shadow-lg">Commit To Registry</button>
                 </div>
               </div>
               
               <div className="flex space-x-8 overflow-x-auto no-scrollbar">
-                {(['content', 'media', 'seo', 'metadata', 'analytics', 'revisions'] as Tab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${
-                      activeTab === tab ? 'border-syan-teal text-syan-teal' : 'border-transparent text-gray-400 hover:text-syan-dark'
-                    }`}
-                  >
+                {(['content', 'seo', 'metadata', 'analytics', 'revisions'] as Tab[]).map((tab) => (
+                  <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-4 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab ? 'border-syan-teal text-syan-teal' : 'border-transparent text-gray-400'}`}>
                     {tab}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex-grow overflow-y-auto p-10 bg-white medical-grid">
+            <div className="flex-grow overflow-y-auto p-10 bg-white">
               {activeTab === 'content' && (
-                <div className="space-y-8 max-w-5xl">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div className="flex-1">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Article Title</label>
-                      <input 
-                        type="text" 
-                        value={blogData.title}
-                        onChange={(e) => handleTitleChange(e.target.value)}
-                        className="w-full px-6 py-5 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold text-lg serif outline-none focus:border-syan-teal transition-all" 
-                        placeholder="e.g. Advancements in Pediatric Genomic Sequencing"
-                      />
+                <div className="space-y-8 max-w-6xl">
+                  <div className="grid md:grid-cols-12 gap-6">
+                    <div className="md:col-span-9">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Primary Title</label>
+                      <input type="text" value={blogData.title} onChange={(e) => { const newData={...blogData, title:e.target.value}; setBlogData(newData); handleLiveSEO(newData); }} className="w-full px-6 py-5 bg-syan-gray border border-gray-100 rounded-2xl font-bold text-lg serif outline-none focus:border-syan-teal" placeholder="e.g. Advancements in Pediatric Genomic Sequencing" />
                     </div>
-                    <div className="md:w-64 pt-6">
-                       <button 
-                        onClick={handleAiGenerate}
-                        disabled={isAiGenerating}
-                        className="w-full h-16 flex items-center justify-center space-x-2 bg-syan-dark text-syan-sky rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50"
-                       >
-                         {isAiGenerating ? (
-                           <span className="animate-pulse">Synthesizing...</span>
-                         ) : (
-                           <>
-                             <span>✨ AI SEO Generate</span>
-                           </>
-                         )}
+                    <div className="md:col-span-3 pt-6">
+                       <button onClick={handleAiPillarCompose} disabled={isAiProcessing} className="w-full h-full bg-syan-dark text-syan-sky rounded-2xl flex items-center justify-center space-x-2 font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 transition-all disabled:opacity-50">
+                          {isAiProcessing ? <span className="animate-pulse">Synthesizing...</span> : <span>✨ Compose Pillar Post</span>}
                        </button>
                     </div>
                   </div>
-                  
-                  <div className="grid md:grid-cols-3 gap-8">
-                    <div className="md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Permanent URL Slug</label>
-                      <div className="flex items-center mt-2 bg-syan-gray/50 border border-gray-100 rounded-2xl px-6 py-4">
-                        <span className="text-[10px] text-gray-400 font-bold">.../blogs/</span>
-                        <input 
-                          type="text" 
-                          value={blogData.slug}
-                          onChange={(e) => setBlogData({...blogData, slug: e.target.value})}
-                          className="flex-grow bg-transparent outline-none text-xs font-bold text-syan-teal ml-1" 
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Faculty Author</label>
-                      <select 
-                        value={blogData.author}
-                        onChange={(e) => setBlogData({...blogData, author: e.target.value})}
-                        className="w-full px-6 py-4 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold appearance-none outline-none focus:border-syan-teal"
-                      >
-                        <option>Dr. S. Yan</option>
-                        <option>Prof. Sarah Malik</option>
-                        <option>Ahmed Khan</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="h-[500px] flex flex-col">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 block">Content Material & Insights</label>
-                    <RichTextEditor 
-                      value={blogData.content}
-                      onChange={(val) => {
-                        const newData = { ...blogData, content: val };
-                        setBlogData(newData);
-                        handleLiveSEO(newData);
-                      }}
-                      placeholder="Draft clinical content..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'media' && (
-                <div className="space-y-8">
-                  <div className="flex space-x-4">
-                    <button onClick={() => addMedia('image')} className="flex items-center space-x-2 px-6 py-3 bg-syan-gray rounded-xl border border-gray-100 hover:border-syan-teal transition-all">
-                      <span className="text-xl">🖼️</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Add Image URL</span>
-                    </button>
-                    <button onClick={() => addMedia('video')} className="flex items-center space-x-2 px-6 py-3 bg-syan-gray rounded-xl border border-gray-100 hover:border-syan-teal transition-all">
-                      <span className="text-xl">🎥</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Add Video URL</span>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(blogData.media || []).map((m, i) => (
-                      <div key={i} className="relative bg-white p-4 rounded-3xl border border-gray-100 group shadow-sm">
-                        <button 
-                          onClick={() => removeMedia(i)}
-                          className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                        >✕</button>
-                        <div className="aspect-video bg-syan-gray rounded-2xl overflow-hidden mb-4">
-                          {m.type === 'image' ? (
-                            <img src={m.url} className="w-full h-full object-cover" alt="preview" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-syan-sky font-black text-[10px]">VIDEO ASSET</div>
-                          )}
-                        </div>
-                        <p className="text-[9px] font-black text-gray-400 truncate">{m.url}</p>
-                      </div>
-                    ))}
+                  <div className="h-[600px] flex flex-col">
+                    <RichTextEditor value={blogData.content} onChange={(val) => { const newData={...blogData, content:val}; setBlogData(newData); handleLiveSEO(newData); }} placeholder="Draft clinical content..." />
                   </div>
                 </div>
               )}
 
               {activeTab === 'seo' && (
                 <div className="grid lg:grid-cols-12 gap-10">
-                  <div className="lg:col-span-7 space-y-8">
-                    <div>
-                      <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Search Engine Result Preview (SERP)</h4>
-                      <SERPPreview 
-                        title={blogData.seo?.seoTitle || blogData.title} 
-                        url={blogData.slug} 
-                        description={blogData.seo?.metaDescription || ''} 
-                      />
+                  <div className="lg:col-span-7 space-y-10">
+                    <SERPPreview title={blogData.seo.seoTitle || blogData.title} url={blogData.slug} description={blogData.seo.metaDescription} />
+                    
+                    {/* AI SEO Assistant Panel */}
+                    <div className="bg-syan-dark p-10 rounded-[2.5rem] text-white space-y-8 shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+                        <ICONS.AI className="w-64 h-64" />
+                      </div>
+                      
+                      <div className="flex justify-between items-center relative z-10">
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-widest text-syan-sky">TruSEO™ AI Assistant</h4>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">Semantic & Structural Intelligence</p>
+                        </div>
+                        <button 
+                          onClick={handleGetDetailedSeoAnalysis} 
+                          disabled={isAiProcessing} 
+                          className="px-6 py-2.5 bg-syan-teal text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-syan-teal transition-all shadow-xl disabled:opacity-50"
+                        >
+                          {isAiProcessing ? <span className="flex items-center"><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />Analyzing...</span> : 'Run Deep Audit'}
+                        </button>
+                      </div>
+                      
+                      {detailedAiSuggestions ? (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500 relative z-10">
+                          <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-6">
+                              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 group">
+                                <p className="text-[10px] text-syan-sky font-black uppercase mb-3 flex justify-between items-center">
+                                  Optimized Title
+                                  <button onClick={() => applyAISuggestion('title')} className="text-[8px] bg-syan-sky/20 px-2 py-0.5 rounded hover:bg-syan-sky hover:text-white transition-all">Apply</button>
+                                </p>
+                                <p className="text-xs font-medium text-gray-300 leading-relaxed italic">"{detailedAiSuggestions.optimizedTitle}"</p>
+                              </div>
+                              <div className="bg-white/5 p-6 rounded-2xl border border-white/10 group">
+                                <p className="text-[10px] text-syan-sky font-black uppercase mb-3 flex justify-between items-center">
+                                  Meta Description
+                                  <button onClick={() => applyAISuggestion('meta')} className="text-[8px] bg-syan-sky/20 px-2 py-0.5 rounded hover:bg-syan-sky hover:text-white transition-all">Apply</button>
+                                </p>
+                                <p className="text-xs font-medium text-gray-300 leading-relaxed italic">"{detailedAiSuggestions.metaDescription}"</p>
+                              </div>
+                            </div>
+
+                            <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                              <p className="text-[10px] text-syan-sky font-black uppercase mb-4">Semantic Hierarchy</p>
+                              <div className="space-y-4">
+                                <div className="flex items-start space-x-3">
+                                  <span className="text-[8px] font-black bg-white/10 px-1.5 py-0.5 rounded text-gray-400">H1</span>
+                                  <p className="text-[11px] font-bold text-gray-200">{detailedAiSuggestions.suggestedHeadings.h1}</p>
+                                </div>
+                                <div className="space-y-2">
+                                  {detailedAiSuggestions.suggestedHeadings.h2.slice(0, 3).map((h, i) => (
+                                    <div key={i} className="flex items-start space-x-3 ml-2">
+                                      <span className="text-[8px] font-black bg-white/5 px-1.5 py-0.5 rounded text-gray-500">H2</span>
+                                      <p className="text-[10px] font-medium text-gray-400">{h}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
+                            <div>
+                              <p className="text-[10px] text-syan-sky font-black uppercase mb-3 flex items-center">
+                                <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/></svg>
+                                Keyword Density
+                              </p>
+                              <p className="text-[11px] text-gray-300 leading-relaxed font-medium">{detailedAiSuggestions.keywordDensityFeedback}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-syan-sky font-black uppercase mb-3 flex items-center">
+                                <svg className="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM7 4a1 1 0 000 2H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8a2 2 0 00-2-2h-1a1 1 0 100-2H7zM8 8a1 1 0 112 0v2a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v2a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+                                Readability Audit
+                              </p>
+                              <ul className="space-y-2">
+                                {detailedAiSuggestions.readabilitySuggestions.map((s, i) => (
+                                  <li key={i} className="text-[10px] text-gray-400 flex items-start">
+                                    <span className="text-syan-sky mr-2">•</span>
+                                    {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-12 text-center border-2 border-dashed border-white/10 rounded-3xl relative z-10">
+                          <p className="text-xs text-gray-400 italic">Trigger a deep audit to unlock clinical SEO intelligence.</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="space-y-6 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                    <div className="space-y-6 bg-syan-gray/50 p-10 rounded-[2.5rem] border border-gray-100">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Focus Keyword</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. Clinical AI"
-                          value={blogData.seo?.focusKeyword || ''}
-                          onChange={(e) => { 
-                            const newData = {...blogData, seo: {...(blogData.seo || {}), focusKeyword: e.target.value}};
-                            setBlogData(newData); 
-                            handleLiveSEO(newData); 
-                          }}
-                          className="w-full px-6 py-4 bg-syan-gray border border-gray-100 rounded-2xl mt-2 font-bold outline-none focus:border-syan-teal" 
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">SEO Title Override</label>
-                        <input 
-                          type="text" 
-                          value={blogData.seo?.seoTitle || ''}
-                          onChange={(e) => setBlogData({...blogData, seo: {...(blogData.seo || {}), seoTitle: e.target.value}})}
-                          className="w-full px-6 py-4 bg-syan-gray border border-gray-100 rounded-2xl mt-2 font-bold outline-none focus:border-syan-teal" 
-                        />
-                        <p className="text-[9px] text-gray-400 mt-2 ml-1 uppercase font-bold">Chars: {(blogData.seo?.seoTitle?.length || blogData.title?.length || 0)} / 60</p>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Meta Description</label>
-                        <textarea 
-                          rows={3} 
-                          value={blogData.seo?.metaDescription || ''}
-                          onChange={(e) => setBlogData({...blogData, seo: {...(blogData.seo || {}), metaDescription: e.target.value}})}
-                          className="w-full px-6 py-4 bg-syan-gray border border-gray-100 rounded-2xl mt-2 font-medium outline-none focus:border-syan-teal resize-none"
-                          placeholder="Summarize the insight for search engines..."
-                        ></textarea>
-                        <p className="text-[9px] text-gray-400 mt-2 ml-1 uppercase font-bold">Chars: {(blogData.seo?.metaDescription?.length || 0)} / 160</p>
+                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Focus Keyword</label>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            value={blogData.seo.focusKeyword} 
+                            onChange={(e) => { const newData={...blogData, seo:{...blogData.seo, focusKeyword: e.target.value}}; setBlogData(newData); handleLiveSEO(newData); }} 
+                            className="w-full px-8 py-5 bg-white border border-gray-100 rounded-2xl outline-none shadow-sm focus:border-syan-teal text-sm font-bold" 
+                            placeholder="e.g. Clinical Genomics" 
+                          />
+                          <div className="absolute right-6 top-1/2 -translate-y-1/2 text-syan-teal">
+                            <ICONS.Exam className="w-5 h-5" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="lg:col-span-5 space-y-6">
-                    <div className="bg-syan-dark p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <ICONS.AI className="w-32 h-32" />
-                      </div>
-                      <h4 className="text-xs font-black uppercase tracking-widest text-syan-sky mb-6 flex items-center">
-                        <span className="w-2 h-2 rounded-full bg-syan-sky animate-pulse mr-2"></span>
-                        Live SEO Analysis
-                      </h4>
-                      <ul className="space-y-4">
-                        {(seoAnalysis.checks || []).map((check, i) => (
-                          <li key={i} className="flex items-start text-[11px] font-bold text-gray-300">
-                            <span className={`mr-3 text-lg leading-none ${check.includes("optimal") || check.includes("detected") || check.includes("Excellent") || check.includes("Focus keyword") || check.includes("Ideal") ? 'text-syan-sky' : 'text-syan-coral'}`}>•</span> 
-                            <span>{check}</span>
-                          </li>
+                  <div className="lg:col-span-5 flex flex-col bg-white border border-gray-100 rounded-[3rem] overflow-hidden shadow-sm h-[700px]">
+                    <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between">
+                      <div className="flex space-x-8">
+                        {['all', 'basic', 'title', 'readability'].map(f => (
+                          <button key={f} onClick={() => setSeoFilter(f as any)} className={`text-[10px] font-black uppercase tracking-widest pb-1 border-b-2 transition-all ${seoFilter === f ? 'border-syan-teal text-syan-teal' : 'border-transparent text-gray-400'}`}>{f}</button>
                         ))}
-                      </ul>
-                      <div className="mt-8 pt-6 border-t border-white/10">
-                        <div className="flex justify-between items-end">
-                          <span className="text-[9px] uppercase font-black tracking-widest text-gray-500">Clinical Optimization</span>
-                          <span className="text-3xl font-black text-syan-sky">{seoAnalysis.score}%</span>
-                        </div>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 rounded-full bg-syan-teal animate-pulse"></div>
+                        <span className="text-[9px] font-black uppercase text-gray-400">Live Audit</span>
+                      </div>
+                    </div>
+                    <div className="flex-grow overflow-y-auto px-10 py-6 no-scrollbar">
+                      {filteredChecks.map((c, i) => <SEOAuditItem key={i} check={c} />)}
+                      {filteredChecks.length === 0 && (
+                        <div className="py-20 text-center text-gray-300 uppercase font-black text-xs tracking-widest">No issues detected</div>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
 
               {activeTab === 'metadata' && (
-                <div className="grid md:grid-cols-2 gap-10 max-w-4xl">
-                  <div className="space-y-6 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Publish Date</label>
-                      <input 
-                        type="date" 
-                        value={blogData.publishDate}
-                        onChange={(e) => setBlogData({...blogData, publishDate: e.target.value})}
-                        className="w-full px-6 py-4 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold outline-none focus:border-syan-teal" 
-                      />
+                <div className="grid lg:grid-cols-2 gap-10">
+                  <div className="space-y-8">
+                    <div className="flex justify-between items-center">
+                       <h3 className="text-sm font-black text-syan-dark uppercase tracking-widest">Social Metadata</h3>
+                       <button onClick={handleGenerateSocialMeta} disabled={isAiProcessing} className="text-[10px] font-black text-syan-teal uppercase tracking-widest bg-syan-teal/5 px-4 py-1.5 rounded-full hover:bg-syan-teal hover:text-white transition-all">
+                        {isAiProcessing ? 'Synthesizing...' : '✨ Synthesize Social Meta'}
+                       </button>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Post Status</label>
-                      <select 
-                        value={blogData.status}
-                        onChange={(e) => setBlogData({...blogData, status: e.target.value as any})}
-                        className="w-full px-6 py-4 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold outline-none"
-                      >
-                        <option>Draft</option>
-                        <option>Published</option>
-                        <option>Archived</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Layout Template</label>
-                      <select 
-                        value={blogData.template}
-                        onChange={(e) => setBlogData({...blogData, template: e.target.value})}
-                        className="w-full px-6 py-4 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold outline-none"
-                      >
-                        <option>Standard</option>
-                        <option>Clinical Study</option>
-                        <option>Technical Report</option>
-                        <option>Academic Paper</option>
-                      </select>
+                    <div className="space-y-6 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+                      <input type="text" placeholder="OG Title" value={blogData.social.ogTitle} className="w-full px-6 py-4 bg-syan-gray border rounded-2xl outline-none" onChange={(e) => setBlogData({...blogData, social: {...blogData.social, ogTitle: e.target.value}})} />
+                      <textarea placeholder="OG Description" rows={4} value={blogData.social.ogDescription} className="w-full px-6 py-4 bg-syan-gray border rounded-2xl outline-none" onChange={(e) => setBlogData({...blogData, social: {...blogData.social, ogDescription: e.target.value}})} />
                     </div>
                   </div>
-
-                  <div className="space-y-6 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Tags (Comma Separated)</label>
-                      <input 
-                        type="text" 
-                        placeholder="AI, Diagnostics, Pedagogy"
-                        value={blogData.tags}
-                        onChange={(e) => setBlogData({...blogData, tags: e.target.value})}
-                        className="w-full px-6 py-4 bg-syan-gray/50 border border-gray-100 rounded-2xl mt-2 font-bold outline-none focus:border-syan-teal" 
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-syan-gray/30 rounded-2xl border border-gray-100">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-syan-dark tracking-widest">Discussion Panel</p>
-                        <p className="text-[9px] text-gray-400 font-bold">Allow institutional comments</p>
-                      </div>
-                      <button 
-                        onClick={() => setBlogData({...blogData, allowComments: !blogData.allowComments})}
-                        className={`w-12 h-6 rounded-full transition-all relative ${blogData.allowComments ? 'bg-syan-teal' : 'bg-gray-200'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${blogData.allowComments ? 'left-7' : 'left-1'}`}></div>
-                      </button>
+                  <div className="bg-syan-dark rounded-[2.5rem] flex items-center justify-center p-12 text-center text-white">
+                    <div className="z-10">
+                      <p className="text-syan-sky text-[10px] font-black uppercase tracking-[0.3em] mb-4">OG Preview Frame</p>
+                      <div className="w-full max-w-sm aspect-video bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center font-black text-white/20">Social Preview</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {activeTab === 'revisions' && (
-                <div className="space-y-4 max-w-3xl">
-                  {revisions.length > 0 ? revisions.map((rev, i) => (
-                    <div key={rev.revId} className="flex items-center justify-between p-6 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-syan-teal transition-all group">
-                      <div className="flex items-center space-x-6">
-                        <div className="w-10 h-10 bg-syan-gray rounded-full flex items-center justify-center text-gray-400 font-black text-xs">#{revisions.length - i}</div>
-                        <div>
-                          <p className="text-sm font-bold text-syan-dark">Modified by {rev.data.author || 'System'}</p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(rev.changedAt).toLocaleString()}</p>
-                        </div>
+              {activeTab === 'analytics' && (
+                <div className="max-w-4xl mx-auto py-10">
+                   <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-gray-100 text-center space-y-12">
+                      <div className="space-y-4">
+                        <h3 className="text-2xl font-black text-syan-dark uppercase tracking-tight">AI Reach Forecasting</h3>
+                        <p className="text-gray-400 text-sm font-medium">Predicting performance based on medical TruSEO™ analysis.</p>
                       </div>
-                      <button 
-                        onClick={() => {
-                          if (confirm('Restore this revision? Unsaved changes will be lost.')) {
-                            setBlogData(rev.data);
-                            setActiveTab('content');
-                          }
-                        }}
-                        className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-syan-sky hover:text-syan-teal group-hover:scale-105 transition-transform"
-                      >Restore Record</button>
+
+                      <div className="grid md:grid-cols-3 gap-12">
+                        {[
+                          { label: 'Search Visibility', score: analyticsResult?.seoScore || 0, color: 'text-syan-teal' },
+                          { label: 'Clinical Authority', score: analyticsResult?.authorityScore || 0, color: 'text-syan-sky' },
+                          { label: 'User Retention', score: analyticsResult?.engagementScore || 0, color: 'text-syan-coral' }
+                        ].map((m, i) => (
+                          <div key={i} className="space-y-4">
+                             <div className="relative w-40 h-40 mx-auto">
+                                <svg className="w-full h-full transform -rotate-90">
+                                   <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                                   <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className={`${m.color} transition-all duration-1000 ease-out`} strokeDasharray="439.8" strokeDashoffset={439.8 - (439.8 * m.score) / 100} />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center text-3xl font-black text-syan-dark">{m.score}%</div>
+                             </div>
+                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">{m.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-10 border-t border-gray-50">
+                        {analyticsResult ? (
+                          <div className="bg-syan-gray p-6 rounded-2xl text-left border-l-4 border-syan-teal">
+                            <p className="text-sm font-medium text-gray-600 leading-relaxed italic">"{analyticsResult.forecast}"</p>
+                          </div>
+                        ) : (
+                          <button onClick={handlePredictAnalytics} disabled={isAiProcessing} className="px-10 py-4 bg-syan-dark text-syan-sky rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all">
+                             {isAiProcessing ? 'Simulating...' : '✨ Run Predictive Simulation'}
+                          </button>
+                        )}
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'revisions' && (
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {revisions.map((rev: any, i: number) => (
+                    <div key={i} className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm flex justify-between items-center">
+                       <div>
+                          <p className="text-xs font-black text-syan-dark uppercase tracking-widest mb-1">Entry v{revisions.length - i}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(rev.changedAt).toLocaleString()}</p>
+                          <p className="mt-4 text-xs font-medium text-gray-500 italic">"AI Reflection: {rev.data.aiSummary || 'No summary available'}"</p>
+                       </div>
+                       <button onClick={() => setBlogData(rev.data)} className="px-6 py-2 border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-syan-teal hover:bg-syan-teal hover:text-white transition-all">Restore</button>
                     </div>
-                  )) : (
-                    <div className="text-center py-20 bg-syan-gray/30 rounded-[2.5rem] border border-dashed border-gray-200 text-gray-400 font-bold uppercase text-[10px] tracking-widest">
-                      No previous revisions found for this insight.
-                    </div>
-                  )}
+                  ))}
+                  {revisions.length === 0 && <div className="py-20 text-center text-gray-300 font-black uppercase text-xs">No version history available.</div>}
                 </div>
               )}
             </div>
@@ -489,42 +502,29 @@ const AdminBlogs: React.FC = () => {
         </div>
       )}
 
-      {/* Main Registry Table */}
+      {/* Registry Table */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="bg-syan-gray/50 border-b border-gray-100">
-              <th className="px-10 py-5 text-left text-[9px] uppercase font-black tracking-widest text-gray-400">Article Registry Entry</th>
-              <th className="px-10 py-5 text-left text-[9px] uppercase font-black tracking-widest text-gray-400">Permanent Slug</th>
-              <th className="px-10 py-5 text-left text-[9px] uppercase font-black tracking-widest text-gray-400">Clinical Review Status</th>
-              <th className="px-10 py-5 text-right text-[9px] uppercase font-black tracking-widest text-gray-400">System Actions</th>
+              <th className="px-10 py-5 text-left text-[9px] uppercase font-black tracking-widest text-gray-400">Insight Name</th>
+              <th className="px-10 py-5 text-left text-[9px] uppercase font-black tracking-widest text-gray-400">Registry Status</th>
+              <th className="px-10 py-5 text-right text-[9px] uppercase font-black tracking-widest text-gray-400">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 text-xs">
+          <tbody className="divide-y divide-gray-50">
             {posts.map((post) => (
               <tr key={post.id} className="hover:bg-syan-gray/30 transition-colors group">
                 <td className="px-10 py-7">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-syan-dark uppercase tracking-tight text-sm mb-0.5">{post.title}</span>
-                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">By {post.author}</span>
-                  </div>
-                </td>
-                <td className="px-10 py-7">
-                  <span className="text-syan-teal font-mono bg-syan-teal/5 px-3 py-1 rounded-md text-[10px]">/{post.slug}</span>
+                  <span className="font-bold text-syan-dark uppercase tracking-tight text-sm">{post.title}</span>
                 </td>
                 <td className="px-10 py-7">
                   <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
                     post.status === 'Published' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
-                  }`}>
-                    {post.status}
-                  </span>
+                  }`}>{post.status}</span>
                 </td>
-                <td className="px-10 py-7 text-right space-x-6">
-                  <button 
-                    onClick={() => openEditor(post)} 
-                    className="text-syan-sky hover:text-syan-teal font-black uppercase text-[9px] tracking-[0.2em] transition-all"
-                  >Enter Editor</button>
-                  <button className="text-red-300 hover:text-red-500 font-black uppercase text-[9px] tracking-[0.2em] transition-all">Archive</button>
+                <td className="px-10 py-7 text-right">
+                  <button onClick={() => openEditor(post)} className="text-syan-sky hover:text-syan-teal font-black uppercase text-[9px] tracking-[0.2em] transition-all">Open Console</button>
                 </td>
               </tr>
             ))}

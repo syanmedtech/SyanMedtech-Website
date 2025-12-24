@@ -1,19 +1,34 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { ICONS } from '../constants.tsx';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const cart = JSON.parse(localStorage.getItem('syan_cart') || '[]');
+      setCartCount(cart.reduce((acc: number, item: any) => acc + item.quantity, 0));
+    };
+    updateCount();
+    window.addEventListener('storage', updateCount);
+    const interval = setInterval(updateCount, 1000);
+    return () => {
+      window.removeEventListener('storage', updateCount);
+      clearInterval(interval);
+    };
+  }, []);
 
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Services', path: '/services' },
+    { name: 'Store', path: '/store' },
     { name: 'DiagnoseRight', path: '/diagnose-right' },
     { name: 'Insights', path: '/blogs' },
     { name: 'About', path: '/about' },
-    { name: 'Team', path: '/team' },
-    { name: 'Contact', path: '/contact' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -42,6 +57,16 @@ const Header: React.FC = () => {
               </Link>
             ))}
             <div className="h-4 w-[1px] bg-gray-200 mx-2"></div>
+            
+            <Link to="/cart" className="relative group p-2">
+              <ICONS.Cart className="w-5 h-5 text-gray-500 group-hover:text-syan-teal transition-colors" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-syan-coral text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
             <Link
               to="/contact"
               className="px-5 py-2 bg-syan-teal text-white rounded-md text-[10px] uppercase font-black tracking-widest hover:bg-syan-dark transition-all shadow-sm"
@@ -73,6 +98,10 @@ const Header: React.FC = () => {
               {link.name}
             </Link>
           ))}
+          <Link to="/cart" className="flex items-center space-x-2 text-xs uppercase font-black tracking-widest text-gray-600">
+            <ICONS.Cart className="w-4 h-4" />
+            <span>Cart ({cartCount})</span>
+          </Link>
           <Link
             to="/contact"
             onClick={() => setIsMenuOpen(false)}
