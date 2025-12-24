@@ -4,19 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Inject process.env.API_KEY if available at build time
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
-    // Ensure basic process polyfill for any libraries expecting it
-    'process.env': {}
-  },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: './index.html'
-      }
-    }
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || '')
   },
   server: {
     port: 3000,

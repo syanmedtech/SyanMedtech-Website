@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -8,6 +9,8 @@ const Header: React.FC = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Services', path: '/services' },
+    { name: 'DiagnoseRight', path: '/diagnose-right' },
+    { name: 'Insights', path: '/blogs' },
     { name: 'About', path: '/about' },
     { name: 'Team', path: '/team' },
     { name: 'Contact', path: '/contact' },

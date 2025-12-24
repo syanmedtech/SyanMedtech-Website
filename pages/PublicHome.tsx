@@ -1,9 +1,16 @@
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ICONS, SectionLabel } from '../constants.tsx';
 
 const PublicHome: React.FC = () => {
+  const navigate = useNavigate();
+  
   const scrollToNodeDetail = (id: string) => {
+    if (id === 'ai') {
+      navigate('/diagnose-right');
+      return;
+    }
     const element = document.getElementById(`detail-${id}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -57,9 +64,9 @@ const PublicHome: React.FC = () => {
               <Link to="/contact" className="px-10 py-4 bg-syan-teal text-white rounded-md text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-syan-teal/20 hover:bg-syan-dark transition-all transform hover:-translate-y-1">
                 Request Demo
               </Link>
-              <a href="#ecosystem" className="text-xs font-bold uppercase tracking-widest text-syan-sky hover:text-syan-teal transition-all flex items-center group">
-                Explore Portal <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
-              </a>
+              <Link to="/diagnose-right" className="text-xs font-bold uppercase tracking-widest text-syan-sky hover:text-syan-teal transition-all flex items-center group">
+                Try AI Simulator <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+              </Link>
             </div>
           </div>
 
@@ -90,13 +97,50 @@ const PublicHome: React.FC = () => {
       {/* ECG DIVIDER */}
       <div className="ecg-container"><div className="ecg-line animate-ecg-scan"></div></div>
 
+      {/* BLOG TEASER SECTION */}
+      <section className="py-24 px-6 lg:px-20 bg-white border-b border-gray-50">
+          <div className="max-w-[1400px] mx-auto">
+              <div className="flex justify-between items-end mb-12">
+                  <div className="max-w-xl">
+                      <SectionLabel num="02" text="Medical Insights" />
+                      <h2 className="serif text-4xl lg:text-5xl text-syan-dark">Latest from the Research Registry.</h2>
+                  </div>
+                  <Link to="/blogs" className="text-xs font-black uppercase tracking-widest text-syan-teal border-b-2 border-syan-teal/20 pb-1 hover:border-syan-teal transition-all">
+                      View All Papers →
+                  </Link>
+              </div>
+              <div className="grid md:grid-cols-2 gap-8">
+                  <Link to="/blogs" className="bg-syan-gray p-8 rounded-3xl group hover:bg-syan-teal transition-all duration-700 overflow-hidden relative">
+                      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <ICONS.AI className="w-40 h-40 text-syan-dark" />
+                      </div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-syan-teal group-hover:text-white/80 transition-colors">AI Technology</span>
+                      <h3 className="serif text-3xl text-syan-dark group-hover:text-white mt-4 mb-4 transition-colors">The Future of AI in Clinical Diagnosis</h3>
+                      <p className="text-gray-500 group-hover:text-white/70 text-sm leading-relaxed max-w-sm transition-colors">
+                          Technical overview of generative clinical reasoning models in post-graduate education.
+                      </p>
+                  </Link>
+                  <Link to="/blogs" className="bg-syan-gray p-8 rounded-3xl group hover:bg-syan-dark transition-all duration-700 overflow-hidden relative">
+                      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                          <ICONS.Exam className="w-40 h-40 text-syan-teal" />
+                      </div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-syan-sky group-hover:text-white/80 transition-colors">Academic Integrity</span>
+                      <h3 className="serif text-3xl text-syan-dark group-hover:text-white mt-4 mb-4 transition-colors">Digital Integrity in High-Stakes Exams</h3>
+                      <p className="text-gray-500 group-hover:text-white/70 text-sm leading-relaxed max-w-sm transition-colors">
+                          How blockchain-linked proctoring is setting new standards for medical certification.
+                      </p>
+                  </Link>
+              </div>
+          </div>
+      </section>
+
       {/* ECOSYSTEM HUB SECTION */}
       <section id="ecosystem" className="orbit-container py-32 px-6 lg:px-20 bg-white border-b border-syan-sky/10 relative overflow-hidden">
         <div className="absolute inset-0 medical-grid opacity-40"></div>
         
         <div className="max-w-[1400px] mx-auto relative h-[800px] flex items-center justify-center">
           <div className="absolute top-0 left-0">
-            <SectionLabel num="02" text="Ecosystem Architecture" />
+            <SectionLabel num="03" text="Ecosystem Architecture" />
           </div>
           
           <div className="text-center absolute top-12 z-40">
@@ -130,7 +174,7 @@ const PublicHome: React.FC = () => {
                   className="absolute top-0 left-0"
                   style={{ transform: `rotate(${angle}deg)` }}
                 >
-                  {/* Dashed Connecting Line - linked between center and arm */}
+                  {/* Dashed Connecting Line */}
                   <svg 
                     className="absolute top-0 left-0 pointer-events-none" 
                     style={{ width: 'var(--orbit-radius)', height: '4px', overflow: 'visible' }}
@@ -143,7 +187,6 @@ const PublicHome: React.FC = () => {
                       strokeDasharray="5 8"
                       className="opacity-20"
                     />
-                    {/* Secondary animated "data" flow line */}
                     <line 
                       x1="0" y1="0" 
                       x2="var(--orbit-radius)" y2="0" 
@@ -160,9 +203,7 @@ const PublicHome: React.FC = () => {
                     style={{ transform: `translateX(var(--orbit-radius))` }}
                     className="absolute top-0 left-0"
                   >
-                    {/* Counter-rotation to keep the node upright while the arm orbits */}
                     <div className="animate-counter-rotate">
-                      {/* Premium Floating micro-motion */}
                       <div className="animate-float" style={{ animationDelay: `${i * 0.7}s`, animationDuration: '5s' }}>
                         <button
                           onClick={() => scrollToNodeDetail(node.id)}
@@ -191,7 +232,7 @@ const PublicHome: React.FC = () => {
         </div>
       </section>
 
-      {/* DETAILS GRID - MODULE SPECIFICATIONS */}
+      {/* DETAILS GRID */}
       <section className="bg-white py-24 px-6 lg:px-20 border-b border-syan-sky/10">
         <div className="max-w-[1400px] mx-auto">
           <SectionLabel num="2.1" text="Module Specifications" />
@@ -205,14 +246,13 @@ const PublicHome: React.FC = () => {
                 <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
                   <node.icon className="w-16 h-16" />
                 </div>
-                {/* Fixed: node.isCore is now defined for all nodes in the mapped array */}
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 ${node.isCore ? 'bg-syan-dark text-white' : `bg-syan-gray text-${node.color} group-hover:bg-syan-teal group-hover:text-white`}`}>
                   <node.icon className="w-6 h-6" />
                 </div>
                 <h3 className="font-black text-sm uppercase tracking-widest text-syan-dark mb-4">{node.title}</h3>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed mb-6">{node.detail}</p>
                 <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
-                  <span className="text-[10px] font-black text-syan-teal uppercase tracking-widest cursor-pointer group-hover:translate-x-1 transition-transform inline-block">Technical Docs →</span>
+                  <button onClick={() => scrollToNodeDetail(node.id)} className="text-[10px] font-black text-syan-teal uppercase tracking-widest cursor-pointer group-hover:translate-x-1 transition-transform inline-block">Technical Docs →</button>
                   <div className="w-1.5 h-1.5 rounded-full bg-syan-teal/20 group-hover:bg-syan-teal transition-colors"></div>
                 </div>
               </div>
@@ -226,7 +266,7 @@ const PublicHome: React.FC = () => {
         <div className="absolute inset-0 medical-grid opacity-10"></div>
         <div className="max-w-[1400px] mx-auto relative z-10 grid md:grid-cols-12 gap-16 items-center">
             <div className="md:col-span-5">
-                <SectionLabel num="03" text="Social Impact" />
+                <SectionLabel num="04" text="Social Impact" />
                 <h3 className="serif text-5xl mb-8 leading-tight">Empowering the Future of Health.</h3>
                 <p className="text-gray-400 text-lg leading-relaxed mb-10 font-medium">
                   SYAN MED Tech annually supports dozens of students through our internal scholarship fund and research index, ensuring innovation is accessible to all.

@@ -1,4 +1,3 @@
-
 export enum AdminRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   EDITOR = 'EDITOR',
@@ -31,6 +30,7 @@ export interface TeamMember {
   id: string;
   name: string;
   role: string;
+  dept: string;
   category: 'leadership' | 'medical' | 'tech';
   photo: string;
   bio: string;
