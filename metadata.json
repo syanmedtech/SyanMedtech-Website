@@ -1,0 +1,8 @@
+{
+  "name": "SYAN MED Tech Platform",
+  "description": "A comprehensive medical technology platform and CMS for managing services, education portals, and clinical tools.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
