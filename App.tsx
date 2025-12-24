@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PublicHome from './pages/PublicHome.tsx';
 import PublicServices from './pages/PublicServices.tsx';
 import PublicAbout from './pages/PublicAbout.tsx';
