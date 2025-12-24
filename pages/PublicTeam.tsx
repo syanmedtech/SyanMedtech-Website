@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { SectionLabel } from '../constants';
+import { SectionLabel } from '../constants.tsx';
 
 const PublicTeam: React.FC = () => {
   const faculty = [

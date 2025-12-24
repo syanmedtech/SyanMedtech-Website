@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SectionLabel } from '../constants';
+import { SectionLabel } from '../constants.tsx';
 
 const PublicContact: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', service: 'Institutional Access', message: '' });

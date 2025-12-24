@@ -1,5 +1,5 @@
 import React from 'react';
-import { ICONS, SectionLabel } from '../constants';
+import { ICONS, SectionLabel } from '../constants.tsx';
 
 const PublicServices: React.FC = () => {
   const modules = [
