@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ICONS, SectionLabel } from '../constants';
+import { ICONS, SectionLabel } from '../constants.tsx';
 
 const PublicHome: React.FC = () => {
   const scrollToNodeDetail = (id: string) => {
@@ -19,7 +19,6 @@ const PublicHome: React.FC = () => {
     detail: "High-performance institutional clinic management and reporting." 
   };
   
-  // Added isCore: false to all outerNodes to match the type of coreNode
   const outerNodes = [
     { title: "Exams", icon: ICONS.Exam, id: "exams", color: "syan-teal", isCore: false, detail: "Secure, proctored high-stakes examination environment." },
     { title: "LMS", icon: ICONS.Education, id: "lms", color: "syan-sky", isCore: false, detail: "Modular medical learning management system." },

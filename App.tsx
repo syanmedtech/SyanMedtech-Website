@@ -1,22 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import PublicHome from './pages/PublicHome';
-import PublicServices from './pages/PublicServices';
-import PublicAbout from './pages/PublicAbout';
-import PublicTeam from './pages/PublicTeam';
-import PublicContact from './pages/PublicContact';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminLogin from './pages/AdminLogin';
-import AdminSettings from './pages/AdminSettings';
-import AdminServices from './pages/AdminServices';
-import AdminTeam from './pages/AdminTeam';
-import AdminContacts from './pages/AdminContacts';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import AdminSidebar from './components/AdminSidebar';
+import PublicHome from './pages/PublicHome.tsx';
+import PublicServices from './pages/PublicServices.tsx';
+import PublicAbout from './pages/PublicAbout.tsx';
+import PublicTeam from './pages/PublicTeam.tsx';
+import PublicContact from './pages/PublicContact.tsx';
+import AdminDashboard from './pages/AdminDashboard.tsx';
+import AdminLogin from './pages/AdminLogin.tsx';
+import AdminSettings from './pages/AdminSettings.tsx';
+import AdminServices from './pages/AdminServices.tsx';
+import AdminTeam from './pages/AdminTeam.tsx';
+import AdminContacts from './pages/AdminContacts.tsx';
+import Header from './components/Header.tsx';
+import Footer from './components/Footer.tsx';
+import AdminSidebar from './components/AdminSidebar.tsx';
 
-// Mock Auth Context (In real production, use Firebase Auth)
+// Mock Auth Context
 const AuthContext = React.createContext<{
   user: any;
   login: (u: string, p: string) => Promise<boolean>;
