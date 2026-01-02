@@ -1,10 +1,9 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { db } from "./firestore.ts";
 
 export type BlockType = 
   | 'hero' | 'text' | 'image' | 'cta' | 'service-grid' 
-  | 'impact-stat' | 'divider' | 'footer' | 'blog-teaser'
+  | 'impact-stat' | 'divider' | 'blog-teaser'
   | 'cta-banner' | 'heading' | 'video' | 'pricing' | 'accordion' | 'maps' | 'spacer'
   | 'clinical-vitals';
 
@@ -27,6 +26,14 @@ export const DEFAULT_STRUCTURE: PageBlock[] = [
       subheadline: "SYAN MED Tech provides a cohesive ecosystem bridging the gap between clinical reality and academic excellence through secure, intelligent software.",
       buttonText: "Request Demo",
       pills: ['Secure', 'HIPAA Ready', 'Scalable', 'AI-Driven'],
+      bgImages: [
+        "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=2000", // Surgery 1
+        "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&q=80&w=2000", // Surgery 2
+        "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=2000", // Medicine 1
+        "https://images.unsplash.com/photo-1530210124550-912dc1381cb8?auto=format&fit=crop&q=80&w=2000", // Medicine 2
+        "https://images.unsplash.com/photo-1628595351029-c2bf17511435?auto=format&fit=crop&q=80&w=2000", // CVS Visualization
+        "https://images.unsplash.com/photo-1557946632-4d2b6180c4c4?auto=format&fit=crop&q=80&w=2000"  // Eye Macro/Tech
+      ],
       vitals: [
         { label: "Global Reach", value: "10k+ Students", sub: "Active Academic Users" },
         { label: "Infrastructure", value: "Secure Micro-services", sub: "Production-Ready Scale" },
@@ -104,18 +111,6 @@ export const DEFAULT_STRUCTURE: PageBlock[] = [
       headline: "Advancing Medical Standards Through Digital Excellence.",
       buttonText: "Partner With Our Ecosystem"
     }
-  },
-  { 
-    id: 'footer-1', 
-    type: 'footer', 
-    order: 6, 
-    content: { 
-      description: "Pioneering medical technology solutions for the modern healthcare era. Empowering educators and professionals with secure, scalable platforms.",
-      copyright: "© 2025 SYAN MED Tech. All rights reserved.",
-      email: "info@syanmed.tech",
-      phone: "+1 (555) 123-4567",
-      address: "Medical City, Tech District"
-    } 
   }
 ];
 

@@ -3,11 +3,12 @@ import React, { useState, useEffect, createContext } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PublicHome from './pages/PublicHome.tsx';
 import PublicServices from './pages/PublicServices.tsx';
+import ServiceDetail from './pages/ServiceDetail.tsx';
 import PublicAbout from './pages/PublicAbout.tsx';
 import PublicTeam from './pages/PublicTeam.tsx';
 import PublicContact from './pages/PublicContact.tsx';
-import PublicDiagnoseRight from './pages/PublicDiagnoseRight.tsx';
 import PublicBlogs from './pages/PublicBlogs.tsx';
+import BlogDetail from './pages/BlogDetail.tsx';
 import PublicStore from './pages/PublicStore.tsx';
 import PublicCart from './pages/PublicCart.tsx';
 import AdminDashboard from './pages/AdminDashboard.tsx';
@@ -84,10 +85,11 @@ const App: React.FC = () => {
           {/* Public Routes */}
           <Route path="/" element={<PublicLayout><PublicHome /></PublicLayout>} />
           <Route path="/services" element={<PublicLayout><PublicServices /></PublicLayout>} />
+          <Route path="/services/:slug" element={<PublicLayout><ServiceDetail /></PublicLayout>} />
           <Route path="/store" element={<PublicLayout><PublicStore /></PublicLayout>} />
           <Route path="/cart" element={<PublicLayout><PublicCart /></PublicLayout>} />
-          <Route path="/diagnose-right" element={<PublicLayout><PublicDiagnoseRight /></PublicLayout>} />
           <Route path="/blogs" element={<PublicLayout><PublicBlogs /></PublicLayout>} />
+          <Route path="/blogs/:slug" element={<PublicLayout><BlogDetail /></PublicLayout>} />
           <Route path="/about" element={<PublicLayout><PublicAbout /></PublicLayout>} />
           <Route path="/team" element={<PublicLayout><PublicTeam /></PublicLayout>} />
           <Route path="/contact" element={<PublicLayout><PublicContact /></PublicLayout>} />

@@ -5,7 +5,7 @@ import { ICONS, SectionLabel } from '../constants.tsx';
 import { pageEditorService, PageBlock } from '../services/pageEditor.ts';
 
 const VitalsCard: React.FC<{ items: any[] }> = ({ items }) => (
-  <div className="bg-white p-8 lg:p-10 rounded-[2rem] lg:rounded-[2.5rem] border border-gray-100 shadow-2xl w-full max-w-md relative overflow-hidden group mx-auto lg:mx-0">
+  <div className="bg-white/80 backdrop-blur-xl p-8 lg:p-10 rounded-[2rem] lg:rounded-[2.5rem] border border-white/20 shadow-2xl w-full max-w-md relative overflow-hidden group mx-auto lg:mx-0">
     <div className="absolute -top-10 -right-10 opacity-[0.03] pointer-events-none transform -rotate-12">
       <ICONS.Education className="w-64 h-64 text-syan-teal" />
     </div>
@@ -24,10 +24,99 @@ const VitalsCard: React.FC<{ items: any[] }> = ({ items }) => (
   </div>
 );
 
+const HeroBlock: React.FC<{ block: PageBlock }> = ({ block }) => {
+  const { content, id } = block;
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const images = content.bgImages || [
+    "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=2000",
+    "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&q=80&w=2000",
+    "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=2000",
+    "https://images.unsplash.com/photo-1530210124550-912dc1381cb8?auto=format&fit=crop&q=80&w=2000",
+    "https://images.unsplash.com/photo-1628595351029-c2bf17511435?auto=format&fit=crop&q=80&w=2000",
+    "https://images.unsplash.com/photo-1557946632-4d2b6180c4c4?auto=format&fit=crop&q=80&w=2000"
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIdx((prev) => (prev + 1) % images.length);
+    }, 4000); // 4 seconds interval
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  return (
+    <section key={id} className="relative px-6 lg:px-20 pt-20 lg:pt-32 pb-24 lg:pb-40 overflow-hidden min-h-[90vh] flex items-center">
+      {/* Background Slider */}
+      <div className="absolute inset-0 z-0">
+        {images.map((img: string, idx: number) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${
+              idx === currentIdx ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <img
+              src={img}
+              alt="Medical Tech Background"
+              className="w-full h-full object-cover scale-110"
+            />
+            {/* Overlay for readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/30"></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10 w-full">
+        <div className="text-center lg:text-left">
+          <div className="flex justify-center lg:justify-start">
+            <SectionLabel num="01" text="Introduction" />
+          </div>
+          <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6">
+            {(content.pills || []).map((pill: string) => (
+              <span key={pill} className="px-3 py-1 bg-syan-teal/10 backdrop-blur-sm text-syan-teal text-[9px] font-black uppercase tracking-widest rounded-full border border-syan-teal/20">
+                {pill}
+              </span>
+            ))}
+          </div>
+          <h1 className="serif text-4xl sm:text-5xl lg:text-7xl text-syan-dark leading-[1.1] tracking-tight mb-8">
+            <span className="text-syan-coral">Medical Education</span>,<br />
+            <span className="text-syan-teal">& Clinical</span> <span className="text-syan-yellow">Technology</span>.
+          </h1>
+          <p className="text-gray-600 text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 lg:mb-12 leading-relaxed font-semibold">
+            {content.subheadline}
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-10">
+            <Link to="/contact" className="w-full sm:w-auto px-10 py-5 bg-syan-teal text-white rounded-md text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-syan-teal/20 hover:bg-syan-dark transition-all transform hover:-translate-y-1 text-center">
+              {content.buttonText}
+            </Link>
+          </div>
+        </div>
+        <div className="flex justify-center lg:justify-end">
+          {content.vitals && <VitalsCard items={content.vitals} />}
+        </div>
+      </div>
+
+      {/* Navigation Dots */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex space-x-3">
+        {images.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setCurrentIdx(idx)}
+            className={`h-2 rounded-full transition-all duration-500 ${
+              idx === currentIdx 
+              ? 'w-10 bg-syan-teal' 
+              : 'w-2 bg-gray-300 hover:bg-syan-teal/50'
+            }`}
+            aria-label={`Go to slide ${idx + 1}`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
 const PublicHome: React.FC = () => {
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   
   useEffect(() => {
     const loadData = async () => {
@@ -61,45 +150,11 @@ const PublicHome: React.FC = () => {
         
         switch (type) {
           case 'hero':
-            return (
-              <section key={id} className="bg-white px-6 lg:px-20 pt-16 lg:pt-20 pb-20 lg:pb-24 relative overflow-hidden">
-                <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                  <div className="z-10 text-center lg:text-left">
-                    <div className="flex justify-center lg:justify-start">
-                      <SectionLabel num={content.label?.split('//')[0] || "01"} text={content.label?.split('//')[1] || "Introduction"} />
-                    </div>
-                    <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6">
-                      {(content.pills || []).map((pill: string) => (
-                        <span key={pill} className="px-3 py-1 bg-syan-teal/10 text-syan-teal text-[9px] font-black uppercase tracking-widest rounded-full border border-syan-teal/20">
-                          {pill}
-                        </span>
-                      ))}
-                    </div>
-                    <h1 className="serif text-4xl sm:text-5xl lg:text-7xl text-syan-dark leading-[1.1] tracking-tight mb-8">
-                      Medical <span className="italic text-syan-teal">Education</span>,<br />& Clinical <span className="text-syan-sky">Technology</span>.
-                    </h1>
-                    <p className="text-gray-500 text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 lg:mb-12 leading-relaxed font-medium">
-                      {content.subheadline}
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-10">
-                      <Link to="/contact" className="w-full sm:w-auto px-10 py-5 bg-syan-teal text-white rounded-md text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-syan-teal/20 hover:bg-syan-dark transition-all transform hover:-translate-y-1 text-center">
-                        {content.buttonText}
-                      </Link>
-                      <Link to="/diagnose-right" className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-syan-teal transition-all flex items-center">
-                        TRY AI SIMULATOR <span className="ml-2">→</span>
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="flex justify-center lg:justify-end">
-                    {content.vitals && <VitalsCard items={content.vitals} />}
-                  </div>
-                </div>
-              </section>
-            );
+            return <HeroBlock key={id} block={block} />;
 
           case 'blog-teaser':
             return (
-              <section key={id} className="py-20 lg:py-24 px-6 lg:px-20 bg-syan-gray/30 border-t border-gray-100">
+              <section key={id} className="py-20 lg:py-24 px-6 lg:px-20 bg-syan-gray/30 border-t border-gray-100 relative z-10">
                 <div className="max-w-[1400px] mx-auto">
                   <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-12 lg:mb-16 text-center sm:text-left">
                     <div className="mb-6 sm:mb-0">
@@ -118,7 +173,7 @@ const PublicHome: React.FC = () => {
                            </div>
                            <p className="text-[10px] font-black text-syan-teal tracking-[0.3em] mb-4 lg:mb-6">{item.category}</p>
                            <h3 className="serif text-2xl lg:text-3xl text-syan-dark mb-4 lg:mb-6 group-hover:text-syan-teal transition-colors">{item.title}</h3>
-                           <p className="text-gray-400 text-sm leading-relaxed max-w-sm">{item.detail}</p>
+                           <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-sm">{item.detail}</p>
                         </div>
                       );
                     })}
@@ -129,7 +184,7 @@ const PublicHome: React.FC = () => {
 
           case 'service-grid':
             return (
-              <div key={id} className="bg-white overflow-hidden">
+              <div key={id} className="bg-syan-gray overflow-hidden relative z-10">
                 <section className="orbit-container py-20 lg:py-32 px-6 lg:px-20 bg-white relative border-t border-gray-100">
                   <div className="max-w-[1400px] mx-auto relative h-[600px] sm:h-[700px] lg:h-[800px] flex items-center justify-center">
                     <div className="text-center absolute top-0 z-40 w-full pt-6 lg:pt-10">
@@ -181,37 +236,47 @@ const PublicHome: React.FC = () => {
                   </div>
                 </section>
 
-                <section className="py-20 lg:py-32 px-6 lg:px-20 bg-white border-t border-gray-50">
+                <section className="py-20 lg:py-32 px-6 lg:px-20 bg-syan-gray border-t border-gray-100 relative z-10">
                   <div className="max-w-[1400px] mx-auto">
                     <div className="mb-12 lg:mb-20">
                       <SectionLabel num={content.gridLabel?.split('//')[0] || "2.1"} text={content.gridLabel?.split('//')[1] || "MODULE SPECIFICATIONS"} />
                     </div>
-                    {/* Updated grid classes for 2 columns on mobile and 4 on desktop */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                       {(content.items || []).map((node: any, i: number) => {
                         const Icon = (ICONS as any)[node.icon] || ICONS.Clinic;
                         const targetId = node.title.toLowerCase().replace(/\s+/g, '-');
+                        const isEven = i % 2 === 0;
                         return (
-                          <div id={`module-${targetId}`} key={i} className="bg-white p-6 lg:p-12 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col transition-all duration-500 hover:shadow-xl hover:border-syan-teal/10 group hover:-translate-y-1 relative overflow-hidden">
-                            {/* Faint Outline Icon in Top Right */}
-                            <div className="absolute top-4 right-4 opacity-[0.05] group-hover:opacity-[0.08] transition-opacity">
-                              <Icon className="w-20 lg:w-24 h-20 lg:h-24" />
+                          <div 
+                            id={`module-${targetId}`} 
+                            key={i} 
+                            className={`p-8 lg:p-12 rounded-3xl border border-syan-teal/5 shadow-sm flex flex-col transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_20px_50px_rgba(44,123,113,0.1)] hover:border-syan-coral group relative bg-white`}
+                          >
+                            <div className="absolute top-6 right-6 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
+                              <Icon className="w-16 lg:w-20 h-16 lg:h-20" />
                             </div>
-                            
-                            {/* Main Icon in soft gray box */}
-                            <div className="w-12 h-12 lg:w-14 lg:h-14 bg-[#F6F8F9] rounded-xl flex items-center justify-center text-syan-dark mb-6 lg:mb-8 transition-all duration-500 relative z-10">
-                              <Icon className="w-5 h-5 lg:w-6 lg:h-6" />
+                            {/* Icon Container with tinted background based on color family */}
+                            <div className={`w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center text-syan-teal mb-8 lg:mb-10 transition-all duration-300 ${
+                              isEven
+                                ? 'bg-syan-teal/[0.08] group-hover:bg-syan-teal/[0.12]'
+                                : 'bg-syan-yellow/[0.08] group-hover:bg-syan-yellow/[0.12]'
+                            }`}>
+                              <Icon className="w-6 h-6 lg:w-7 lg:h-7" />
                             </div>
+                            {/* Title with Coral Pink hover transition */}
+                            <h3 className="font-black text-syan-teal text-lg tracking-tighter uppercase mb-3 lg:mb-4 group-hover:text-syan-coral transition-colors duration-300">
+                              {node.title}
+                            </h3>
+                            <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-8 lg:mb-12 flex-grow">
+                              {node.detail}
+                            </p>
                             
-                            <h3 className="font-black text-syan-dark text-base lg:text-lg tracking-tight uppercase mb-2 lg:mb-4 relative z-10">{node.title}</h3>
-                            <p className="text-gray-400 text-[10px] lg:text-xs font-medium leading-relaxed mb-6 lg:mb-10 flex-grow relative z-10">{node.detail}</p>
-                            
-                            <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-gray-50 relative z-10">
-                               <button className="text-[8px] lg:text-[9px] font-black uppercase tracking-widest text-syan-teal flex items-center group/btn">
+                            <div className="flex items-center justify-between pt-6 lg:pt-8 border-t border-gray-100/50">
+                               <button className="text-[9px] font-black uppercase tracking-widest text-syan-teal flex items-center group/btn group-hover:text-syan-coral transition-colors duration-300">
                                  TECHNICAL DOCS 
-                                 <span className="ml-2 group-hover/btn:translate-x-1 transition-transform">→</span>
+                                 <span className="ml-2 group-hover/btn:translate-x-1 transition-transform duration-300">→</span>
                                </button>
-                               <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-syan-teal/10 group-hover:bg-syan-teal transition-colors"></div>
+                               <div className="w-2 h-2 rounded-full bg-syan-teal/10 group-hover:bg-syan-coral transition-colors duration-300"></div>
                             </div>
                           </div>
                         );
@@ -224,7 +289,7 @@ const PublicHome: React.FC = () => {
 
           case 'impact-stat':
             return (
-              <section key={id} className="py-20 lg:py-32 px-6 lg:px-20 bg-[#1F2937] text-white relative">
+              <section key={id} className="py-20 lg:py-32 px-6 lg:px-20 bg-[#1F2937] text-white relative z-10">
                 <div className="absolute inset-0 medical-grid opacity-5"></div>
                 <div className="max-w-[1400px] mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
                   <div className="text-center lg:text-left">
@@ -251,7 +316,7 @@ const PublicHome: React.FC = () => {
 
           case 'cta-banner':
             return (
-              <section key={id} className="py-20 lg:py-32 px-6 lg:px-20 bg-gradient-to-br from-syan-teal to-syan-dark text-white text-center relative overflow-hidden">
+              <section key={id} className="py-20 lg:py-32 px-6 lg:px-20 bg-gradient-to-br from-syan-teal to-syan-dark text-white text-center relative overflow-hidden z-10">
                 <div className="absolute inset-0 opacity-10 medical-grid"></div>
                 <div className="max-w-4xl mx-auto relative z-10">
                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-syan-sky mb-8 lg:mb-10 opacity-80">{content.label}</p>
@@ -262,73 +327,6 @@ const PublicHome: React.FC = () => {
                 </div>
               </section>
             );
-
-          case 'footer':
-             return (
-               <section key={id} className="bg-white text-syan-dark py-20 lg:py-32 px-6 lg:px-20 border-t border-gray-100">
-                  <div className="max-w-[1400px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16">
-                    <div className="col-span-1">
-                      <div className="flex items-center space-x-2 mb-8 lg:mb-10">
-                        <div className="w-10 h-10 bg-syan-teal rounded flex items-center justify-center">
-                          <span className="text-white font-black text-xl leading-none">S</span>
-                        </div>
-                        <span className="text-xl font-black uppercase tracking-tighter">SYAN <span className="text-syan-teal">MED</span> Tech</span>
-                      </div>
-                      <p className="text-gray-400 text-sm leading-relaxed mb-8">
-                        {content.description}
-                      </p>
-                      <Link to="/admin" className="text-[9px] font-black uppercase tracking-widest text-syan-teal border border-syan-teal/20 px-4 py-2 rounded-full inline-block">
-                        Admin Access
-                      </Link>
-                    </div>
-                    
-                    <div className="sm:pt-2">
-                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-6 lg:mb-10 text-gray-300">Quick Links</h4>
-                      <ul className="space-y-4 text-xs font-bold text-gray-500">
-                        <li><Link to="/" className="hover:text-syan-teal transition-colors">Home</Link></li>
-                        <li><Link to="/services" className="hover:text-syan-teal transition-colors">Services</Link></li>
-                        <li><Link to="/about" className="hover:text-syan-teal transition-colors">About Us</Link></li>
-                        <li><Link to="/team" className="hover:text-syan-teal transition-colors">Our Team</Link></li>
-                      </ul>
-                    </div>
-
-                    <div className="sm:pt-2">
-                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-6 lg:mb-10 text-gray-300">Services</h4>
-                      <ul className="space-y-4 text-xs font-bold text-gray-500">
-                        <li>Online Exams</li>
-                        <li>Medical LMS</li>
-                        <li>Clinical AI Tools</li>
-                        <li>EMR Dashboards</li>
-                      </ul>
-                    </div>
-
-                    <div className="sm:pt-2">
-                      <h4 className="font-black text-[10px] uppercase tracking-widest mb-6 lg:mb-10 text-gray-300">Contact</h4>
-                      <ul className="space-y-6 text-xs font-bold text-gray-500">
-                        <li className="flex items-center space-x-3">
-                          <span className="w-1.5 h-1.5 rounded-full bg-syan-teal flex-shrink-0"></span>
-                          <span className="truncate">{content.email}</span>
-                        </li>
-                        <li className="flex items-center space-x-3">
-                          <span className="w-1.5 h-1.5 rounded-full bg-syan-sky flex-shrink-0"></span>
-                          <span>{content.phone}</span>
-                        </li>
-                        <li className="flex items-center space-x-3">
-                          <span className="w-1.5 h-1.5 rounded-full bg-syan-coral flex-shrink-0"></span>
-                          <span className="truncate">{content.address}</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="max-w-[1400px] mx-auto mt-20 lg:mt-32 pt-10 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center text-[8px] lg:text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center md:text-left">
-                    <p className="mb-4 md:mb-0">{content.copyright}</p>
-                    <div className="flex space-x-10">
-                      <a href="#" className="hover:text-syan-dark">Privacy Policy</a>
-                      <a href="#" className="hover:text-syan-dark">Terms of Service</a>
-                    </div>
-                  </div>
-                </section>
-             );
 
           default:
             return null;
