@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { db } from "./firestore.ts";
 
@@ -21,23 +22,23 @@ export const DEFAULT_STRUCTURE: PageBlock[] = [
     type: 'hero', 
     order: 1, 
     content: {
-      label: "01 // Introduction",
-      headline: "Medical Education, & Clinical Technology.",
-      subheadline: "SYAN MED Tech provides a cohesive ecosystem bridging the gap between clinical reality and academic excellence through secure, intelligent software.",
-      buttonText: "Request Demo",
-      pills: ['Secure', 'HIPAA Ready', 'Scalable', 'AI-Driven'],
+      label: "01 // SYSTEM ENTRY",
+      headline: "Synergizing Medical Innovation and Education.",
+      subheadline: "Combining AI diagnostics with advanced learning platforms to empower the next generation of clinical excellence and institutional precision.",
+      buttonText: "Request Platform Access",
+      pills: ['Innovation', 'Education', 'Clinical AI', 'Scalable'],
       bgImages: [
-        "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=2000", // Surgery 1
-        "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&q=80&w=2000", // Surgery 2
-        "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=2000", // Medicine 1
-        "https://images.unsplash.com/photo-1530210124550-912dc1381cb8?auto=format&fit=crop&q=80&w=2000", // Medicine 2
-        "https://images.unsplash.com/photo-1628595351029-c2bf17511435?auto=format&fit=crop&q=80&w=2000", // CVS Visualization
-        "https://images.unsplash.com/photo-1557946632-4d2b6180c4c4?auto=format&fit=crop&q=80&w=2000"  // Eye Macro/Tech
+        "https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=2000", // Medical Innovation Lead
+        "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=2000",
+        "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&q=80&w=2000",
+        "https://images.unsplash.com/photo-1530210124550-912dc1381cb8?auto=format&fit=crop&q=80&w=2000",
+        "https://images.unsplash.com/photo-1628595351029-c2bf17511435?auto=format&fit=crop&q=80&w=2000",
+        "https://images.unsplash.com/photo-1557946632-4d2b6180c4c4?auto=format&fit=crop&q=80&w=2000"
       ],
       vitals: [
-        { label: "Global Reach", value: "10k+ Students", sub: "Active Academic Users" },
-        { label: "Infrastructure", value: "Secure Micro-services", sub: "Production-Ready Scale" },
-        { label: "Intelligence", value: "Gemini 3 Pro", sub: "Clinical Fine-Tuning" }
+        { label: "Global Reach", value: "15k+ Clinicians", sub: "Active Ecosystem Users" },
+        { label: "Intelligence", value: "DiagnoseRight™ Core", sub: "AI Diagnostic Engine" },
+        { label: "Compliance", value: "Clinical-Grade", sub: "HIPAA / GDPR Compliant" }
       ]
     }
   },

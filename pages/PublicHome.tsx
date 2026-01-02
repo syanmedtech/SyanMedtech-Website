@@ -43,6 +43,20 @@ const HeroBlock: React.FC<{ block: PageBlock }> = ({ block }) => {
     return () => clearInterval(timer);
   }, [images.length]);
 
+  // Logic to colorize specific keywords in the headline if it's the synergizing one
+  const renderHeadline = (text: string) => {
+    if (!text) return null;
+    if (text.includes("Synergizing Medical Innovation and Education")) {
+      return (
+        <>
+          <span className="text-syan-dark">Synergizing</span> <span className="text-syan-teal">Medical Innovation</span><br />
+          <span className="text-syan-dark">and</span> <span className="text-syan-coral">Education</span>.
+        </>
+      );
+    }
+    return text;
+  };
+
   return (
     <section key={id} className="relative px-6 lg:px-20 pt-20 lg:pt-32 pb-24 lg:pb-40 overflow-hidden min-h-[90vh] flex items-center">
       {/* Background Slider */}
@@ -68,7 +82,7 @@ const HeroBlock: React.FC<{ block: PageBlock }> = ({ block }) => {
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10 w-full">
         <div className="text-center lg:text-left">
           <div className="flex justify-center lg:justify-start">
-            <SectionLabel num="01" text="Introduction" />
+            <SectionLabel num={content.label?.split('//')[0] || "01"} text={content.label?.split('//')[1] || "Introduction"} />
           </div>
           <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6">
             {(content.pills || []).map((pill: string) => (
@@ -78,8 +92,7 @@ const HeroBlock: React.FC<{ block: PageBlock }> = ({ block }) => {
             ))}
           </div>
           <h1 className="serif text-4xl sm:text-5xl lg:text-7xl text-syan-dark leading-[1.1] tracking-tight mb-8">
-            <span className="text-syan-coral">Medical Education</span>,<br />
-            <span className="text-syan-teal">& Clinical</span> <span className="text-syan-yellow">Technology</span>.
+            {renderHeadline(content.headline)}
           </h1>
           <p className="text-gray-600 text-base lg:text-lg max-w-lg mx-auto lg:mx-0 mb-10 lg:mb-12 leading-relaxed font-semibold">
             {content.subheadline}
