@@ -26,9 +26,9 @@ const Header: React.FC = () => {
     { name: 'Home', path: '/' },
     { name: 'Services', path: '/services' },
     { name: 'Store', path: '/store' },
-    { name: 'Our Blogs', path: '/blogs' },
+    { name: 'DiagnoseRight', path: '/diagnose-right' },
+    { name: 'Insights', path: '/blogs' },
     { name: 'About', path: '/about' },
-    { name: 'Our Team', path: '/team' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
