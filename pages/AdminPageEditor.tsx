@@ -28,9 +28,6 @@ const WIDGETS: Record<string, WidgetDef[]> = {
     { type: 'service-grid', label: 'Ecosystem Hub', icon: ICONS.Education },
     { type: 'impact-stat', label: 'Social Impact', icon: ICONS.Scholarship },
     { type: 'cta-banner', label: 'Global Portfolio', icon: ICONS.Clinic },
-  ],
-  'General': [
-    { type: 'footer', label: 'Global Footer', icon: ICONS.Clinic },
   ]
 };
 
@@ -249,26 +246,19 @@ const AdminPageEditor: React.FC = () => {
                       
                       <div className="text-left mt-16 lg:mt-32">
                          <p className="text-[10px] font-black uppercase tracking-widest text-syan-teal mb-6 lg:mb-10">{block.content.gridLabel}</p>
-                         <div className={`grid gap-4 lg:gap-8 ${previewMode === 'mobile' ? 'grid-cols-2' : 'lg:grid-cols-4'}`}>
-                           {block.content.items.map((item: any, i: number) => {
-                             const Icon = (ICONS as any)[item.icon] || ICONS.Clinic;
-                             return (
-                               <div key={i} className="p-5 border border-gray-100 rounded-[2rem] bg-white relative overflow-hidden group">
-                                  <div className="absolute top-2 right-2 opacity-[0.05]">
-                                    <Icon className="w-12 h-12" />
-                                  </div>
-                                  <div className="w-10 h-10 bg-[#F6F8F9] rounded-lg flex items-center justify-center mb-4 relative z-10">
-                                    <Icon className="w-4 h-4" />
-                                  </div>
-                                  <h4 contentEditable onBlur={(e) => { const ni = [...block.content.items]; ni[i].title = e.currentTarget.textContent; handleUpdateBlock(block.id, { ...block.content, items: ni }); }} className="font-black text-[10px] uppercase mb-2 outline-none relative z-10 tracking-tight">{item.title}</h4>
-                                  <p contentEditable onBlur={(e) => { const ni = [...block.content.items]; ni[i].detail = e.currentTarget.textContent; handleUpdateBlock(block.id, { ...block.content, items: ni }); }} className="text-[9px] text-gray-400 outline-none relative z-10 leading-tight">{item.detail}</p>
-                                  <div className="pt-4 border-t border-gray-50 mt-4 flex justify-between items-center relative z-10">
-                                    <span className="text-[7px] font-black uppercase text-syan-teal">TECHNICAL DOCS →</span>
-                                    <div className="w-1.5 h-1.5 rounded-full bg-syan-teal/10"></div>
-                                  </div>
-                               </div>
-                             );
-                           })}
+                         <div className={`grid gap-6 ${previewMode === 'mobile' ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'}`}>
+                           {block.content.items.map((item: any, i: number) => (
+                             <div 
+                              key={i} 
+                              className="p-8 border border-syan-teal/10 rounded-3xl bg-white shadow-sm transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_20px_50px_rgba(44,123,113,0.15)] hover:border-syan-coral group"
+                             >
+                                <div className="w-12 h-12 bg-syan-teal/5 rounded-2xl flex items-center justify-center text-syan-teal mb-6 group-hover:bg-syan-yellow/30 group-hover:text-syan-coral transition-all">
+                                  <ICONS.Clinic className="w-5 h-5" />
+                                </div>
+                                <h4 contentEditable onBlur={(e) => { const ni = [...block.content.items]; ni[i].title = e.currentTarget.textContent; handleUpdateBlock(block.id, { ...block.content, items: ni }); }} className="font-black text-syan-teal text-[10px] uppercase mb-2 outline-none group-hover:text-syan-coral transition-colors">{item.title}</h4>
+                                <p contentEditable onBlur={(e) => { const ni = [...block.content.items]; ni[i].detail = e.currentTarget.textContent; handleUpdateBlock(block.id, { ...block.content, items: ni }); }} className="text-[10px] text-gray-400 outline-none">{item.detail}</p>
+                             </div>
+                           ))}
                          </div>
                       </div>
                     </div>
@@ -293,22 +283,6 @@ const AdminPageEditor: React.FC = () => {
                   <div className="py-16 lg:py-20 px-6 lg:px-10 bg-syan-teal text-white text-center">
                      <h2 contentEditable onBlur={(e) => handleUpdateBlock(block.id, { ...block.content, headline: e.currentTarget.textContent })} className="text-2xl lg:text-4xl font-black mb-8 outline-none">{block.content.headline}</h2>
                      <button className="bg-white text-syan-dark px-10 py-3 rounded text-[10px] font-black uppercase tracking-widest">{block.content.buttonText}</button>
-                  </div>
-                )}
-                
-                {block.type === 'footer' && (
-                  <div className="bg-white text-syan-dark p-6 lg:p-10 border-t border-gray-100">
-                    <span className="font-black text-xs uppercase tracking-widest">SYAN MED</span>
-                    <div className={`grid gap-8 mt-8 ${previewMode === 'mobile' ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Email</p>
-                        <p contentEditable onBlur={(e) => handleUpdateBlock(block.id, { ...block.content, email: e.currentTarget.textContent })} className="text-xs font-bold outline-none">{block.content.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase">Copyright</p>
-                        <p contentEditable onBlur={(e) => handleUpdateBlock(block.id, { ...block.content, copyright: e.currentTarget.textContent })} className="text-xs font-bold outline-none">{block.content.copyright}</p>
-                      </div>
-                    </div>
                   </div>
                 )}
               </div>
